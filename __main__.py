@@ -78,7 +78,40 @@ Examples:
   WinGamingDiag.exe --verbose    Show detailed output
             """
         )
-        # ... (rest of the parser setup)
+        
+        parser.add_argument(
+            '--quick', 
+            action='store_true',
+            help='Run quick diagnostic (hardware only)',
+            default=False
+        )
+        
+        parser.add_argument(
+            '--output', '-o',
+            type=str,
+            help='Output path for report (default: Desktop)',
+            default=None
+        )
+        
+        parser.add_argument(
+            '--verbose', '-v',
+            action='store_true',
+            help='Enable verbose output',
+            default=False
+        )
+        
+        parser.add_argument(
+            '--no-color',
+            action='store_true',
+            help='Disable colored output',
+            default=False
+        )
+        
+        parser.add_argument(
+            '--version',
+            action='version',
+            version='%(prog)s 1.0.0'
+        )
         
         args = parser.parse_args()
         logging.info(f"Arguments parsed: {args}")
