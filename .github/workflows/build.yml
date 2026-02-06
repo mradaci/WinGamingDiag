@@ -34,7 +34,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --name WinGamingDiag --add-data "src;src" __main__.py
+        pyinstaller --onefile --name WinGamingDiag __main__.py
         
     - name: Test executable
       run: |
