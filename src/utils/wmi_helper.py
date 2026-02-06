@@ -131,8 +131,10 @@ class WMIHelper:
                 if where_clause:
                     query_str += f" WHERE {where_clause}"
                 
+                logging.info(f"WMI: Executing query: {query_str}")
                 # Execute query
                 results = conn.query(query_str)
+                logging.info(f"WMI: Query successful for {wmi_class}.")
                 
                 # Convert to list of dictionaries
                 data = []
