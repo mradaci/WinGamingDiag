@@ -135,8 +135,11 @@ Examples:
         
         # ... (rest of the exit logic)
         logging.info("Graceful finish.")
- 
-     except Exception as e:
+    
+    except KeyboardInterrupt:
+        print("\n\nDiagnostic interrupted by user.")
+        sys.exit(130)
+    except Exception as e:
         logging.critical(f"An unexpected error occurred in main: {e}", exc_info=True)
         sys.exit(1)
     finally:
