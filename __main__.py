@@ -114,8 +114,21 @@ Examples:
             version='%(prog)s 1.0.0'
         )
         
+        parser.add_argument(
+            '--run-hardware-collector',
+            type=str,
+            default=None,
+            help=argparse.SUPPRESS  # Hide this from the help message
+        )
+        
         args = parser.parse_args()
         logging.info(f"Arguments parsed: {args}")
+
+        # If this flag is present, we are in a subprocess. Run only the hardware collector.
+        if args.run_hardware_collector:
+            from src.collectors.collector_script import run_collector
+            run_collector(args.run_hardware_collector)
+            sys.exit(0)
 
         if sys.platform != 'win32':
             logging.warning("This tool is designed for Windows.")

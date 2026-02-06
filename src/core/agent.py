@@ -262,9 +262,64 @@ import tempfile
             
         return snapshot
 
+import logging
+# ...
     def _collect_hardware_info(self) -> HardwareSnapshot:
-        """Collect hardware information using the subprocess method."""
-        return self._collect_hardware_info_subprocess()
+        """Runs the hardware collector in a separate process to isolate crashes."""
+        logging.info("Hardware Collector: Starting subprocess.")
+        snapshot = HardwareSnapshot()
+        
+        try:
+            # Determine the python executable to use
+            python_exe = sys.executable
+            
+            # Determine the path to the collector script
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                base_path = Path(sys._MEIPASS)
+                # When frozen, the executable is sys.executable, but we need to call the python interpreter
+                # The python interpreter is not bundled, so this approach is flawed for frozen apps.
+                # A better approach is to make the collector script an entry point in the spec file.
+                # For now, we will assume a multi-file bundle structure might be needed.
+                # Let's just use the main exe itself with a special flag.
+                
+                # --- NEW APPROACH: RE-ENTRY ---
+                # Instead of a separate script, we re-execute our own .exe with a hidden flag.
+                output_path = tempfile.mktemp(suffix=".json")
+                command = [sys.executable, "--run-hardware-collector", output_path]
+                
+            else:
+                # Running from source
+                base_path = Path(__file__).parent.parent.parent
+                collector_script_path = base_path / 'src' / 'collectors' / 'collector_script.py'
+                output_path = tempfile.mktemp(suffix=".json")
+                command = [sys.executable, str(collector_script_path), output_path]
+
+            logging.info(f"Hardware Collector: Subprocess command: {' '.join(command)}")
+            logging.info(f"Hardware Collector: Subprocess output file: {output_path}")
+
+            process = subprocess.run(command, capture_output=True, text=True, timeout=120)
+
+            if process.returncode == 0 and Path(output_path).exists():
+                logging.info("Hardware Collector: Subprocess completed successfully.")
+                with open(output_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                snapshot = HardwareSnapshot.from_dict(data)
+                self.errors.extend(data.get('errors', []))
+            else:
+                logging.error(f"Hardware Collector: Subprocess failed with return code {process.returncode}.")
+                logging.error(f"Subprocess stdout: {process.stdout}")
+                logging.error(f"Subprocess stderr: {process.stderr}")
+                self.errors.append("Hardware collection subprocess failed.")
+
+            if Path(output_path).exists():
+                Path(output_path).unlink()
+
+        except Exception as e:
+            logging.critical("Hardware Collector: Failed to run subprocess.", exc_info=True)
+            self.errors.append(f"Failed to execute hardware collector subprocess: {e}")
+            
+        return snapshot
+
 
     
     def _collect_event_logs(self) -> EventLogSummary:
