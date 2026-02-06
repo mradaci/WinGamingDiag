@@ -26,8 +26,20 @@ A comprehensive, portable diagnostic tool for Windows gaming systems. Analyzes h
 
 ## Installation
 
-### Option 1: Download Pre-built Executable
-Download `WinGamingDiag.exe` from the releases page and run directly.
+### Option 1: Build Executable (Recommended)
+```bash
+# Clone repository
+git clone https://github.com/mradaci/WinGamingDiag.git
+cd WinGamingDiag
+
+# Install PyInstaller
+pip install pyinstaller
+
+# Build executable
+pyinstaller --onefile --name WinGamingDiag __main__.py
+
+# Executable will be in dist/WinGamingDiag.exe
+```
 
 ### Option 2: Run from Source
 ```bash
