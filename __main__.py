@@ -32,7 +32,8 @@ class StreamToLogger:
     def flush(self):
         pass
 
-sys.stdout = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+# Keep original stdout for the UI
+original_stdout = sys.stdout
 sys.stderr = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
 
 logging.info("--- WinGamingDiag Starting ---")

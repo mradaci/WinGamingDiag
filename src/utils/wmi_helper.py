@@ -9,6 +9,14 @@ from dataclasses import dataclass
 from datetime import datetime
 import time
 import re
+import logging
+
+try:
+    import wmi
+except ImportError:
+    # This will be handled by the is_available check, but allows linting on non-Windows
+    wmi = None
+
 
 
 @dataclass
@@ -139,11 +147,26 @@ class WMIHelper:
                     query_time_ms=query_time
                 )
                 
-            except Exception as e:
-                last_error = e
+            except wmi.x_wmi as wmi_error:
+                last_error = wmi_error
+                logging.error(f"WMI query failed on attempt {attempt + 1}/{self.max_retries}: {query_str}")
+                logging.error(f"WMI specific error: {wmi_error}")
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay)
-                    # Reset connection on retry
+                    self._connection = None
+            except Exception as e:
+                last_error = e
+                logging.error(f"Generic error during WMI query on attempt {attempt + 1}/{self.max_retries}: {query_str}")
+                logging.error(f"Generic exception: {e}", exc_info=True)
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    self._connection = None
+            except Exception as e:
+                last_error = e
+                logging.error(f"Generic error during WMI query on attempt {attempt + 1}/{self.max_retries}: {query_str}")
+                logging.error(f"Generic exception: {e}", exc_info=True)
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
                     self._connection = None
         
         # All retries failed
@@ -175,20 +198,91 @@ class WMIHelper:
             return result.data.get(property_name)
         return None
     
-    def get_computer_system_info(self) -> Dict[str, Any]:
+    def get_computer_system_info(self) -> Optional[Dict[str, Any]]:
         """Get basic computer system information"""
         result = self.query("Win32_ComputerSystem", first_only=True)
-        return result.data if result.success else {}
+        return result.data if result.success else None
     
-    def get_operating_system_info(self) -> Dict[str, Any]:
+    def get_operating_system_info(self) -> Optional[Dict[str, Any]]:
         """Get operating system information"""
         result = self.query("Win32_OperatingSystem", first_only=True)
-        return result.data if result.success else {}
+        return result.data if result.success else None
     
     def get_processor_info(self) -> List[Dict[str, Any]]:
         """Get processor information for all CPUs"""
         result = self.query("Win32_Processor")
-        return result.data if result.success else []
+        return result.data if result.success and result.data is not None else []
+    
+    def get_memory_info(self) -> List[Dict[str, Any]]:
+        """Get physical memory information"""
+        result = self.query("Win32_PhysicalMemory")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_video_controller_info(self) -> List[Dict[str, Any]]:
+        """Get video controller/GPU information"""
+        result = self.query("Win32_VideoController")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_disk_drive_info(self) -> List[Dict[str, Any]]:
+        """Get disk drive information"""
+        result = self.query("Win32_DiskDrive")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_logical_disk_info(self) -> List[Dict[str, Any]]:
+        """Get logical disk (partition) information"""
+        result = self.query("Win32_LogicalDisk")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_baseboard_info(self) -> Optional[Dict[str, Any]]:
+        """Get motherboard information"""
+        result = self.query("Win32_BaseBoard", first_only=True)
+        return result.data if result.success else None
+    
+    def get_bios_info(self) -> Optional[Dict[str, Any]]:
+        """Get BIOS/UEFI information"""
+        result = self.query("Win32_BIOS", first_only=True)
+        return result.data if result.success else None
+    
+    def get_fan_info(self) -> List[Dict[str, Any]]:
+        """Get cooling fan information"""
+        result = self.query("Win32_Fan")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_temperature_info(self) -> List[Dict[str, Any]]:
+        """Get temperature sensor information"""
+        result = self.query("Win32_TemperatureProbe")
+        return result.data if result.success and result.data is not None else []
+        
+    def get_battery_info(self) -> Optional[Dict[str, Any]]:
+        """Get battery information (for laptops)"""
+        result = self.query("Win32_Battery", first_only=True)
+        return result.data if result.success else None
+    
+    def get_network_adapter_info(self) -> List[Dict[str, Any]]:
+        """Get network adapter information"""
+        result = self.query("Win32_NetworkAdapter", 
+                          where_clause="NetEnabled=True")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_pnp_device_info(self) -> List[Dict[str, Any]]:
+        """Get Plug and Play device information"""
+        result = self.query("Win32_PnPEntity")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_service_info(self) -> List[Dict[str, Any]]:
+        """Get Windows service information"""
+        result = self.query("Win32_Service")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_process_info(self) -> List[Dict[str, Any]]:
+        """Get running process information"""
+        result = self.query("Win32_Process")
+        return result.data if result.success and result.data is not None else []
+    
+    def get_startup_command_info(self) -> List[Dict[str, Any]]:
+        """Get startup program information"""
+        result = self.query("Win32_StartupCommand")
+        return result.data if result.success and result.data is not None else []
     
     def get_memory_info(self) -> List[Dict[str, Any]]:
         """Get physical memory information"""
