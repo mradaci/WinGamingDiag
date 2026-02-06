@@ -90,6 +90,98 @@ WinGamingDiag/
 └── README.md                 # This file
 ```
 
+## Example Output
+
+### Terminal Output
+```
+======================================================================
+  WinGamingDiag - System Diagnostic Tool
+======================================================================
+
+🔍 Starting System Diagnostic Collection...
+
+📋 Collecting Windows System Information
+[████████████████████] 100.0% ETA: 0s
+  Complete
+
+📋 Collecting Hardware Information
+Hardware collection complete
+  Duration: 2.3 seconds
+  Components Collected: 6
+
+📋 Analyzing System Event Logs
+Found 3 gaming-related events
+⚠️ Detected 2 recent crashes
+
+📋 Checking Driver Compatibility
+⚠️ 1 critical driver(s) need attention
+ℹ️ 2 driver update(s) available
+
+📋 Detecting Game Launchers
+✓ Found 4 game launcher(s)
+ℹ️ Total games detected: 127
+
+📋 Running Network Diagnostics
+✓ Network connected via ethernet
+ℹ️ DNS latency: 12.5ms
+
+✅ Collection Complete!
+  Duration: 8.7 seconds
+  Components Collected: 6
+
+🔍 Analyzing collected data...
+
+╔────────────────────────────────────────────────────────────────────╗
+║  SYSTEM HEALTH SCORE: 78/100                                       ║
+║  Status: 🟡 GOOD                                                   ║
+║  [███████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ║
+╚────────────────────────────────────────────────────────────────────╝
+
+📊 ISSUE SUMMARY:
+  ✗ Critical: 1
+  ⚠️ High: 2
+  ℹ️ Medium: 3
+  ℹ️ Low: 4
+
+📋 Detailed Findings
+
+🔴 GPU Driver Update Available
+   Category: GAMING
+   Confidence: 90%
+
+   Your graphics driver is not up to date
+
+   💡 Recommendation: Update GPU driver for better game performance and 
+      bug fixes. Use NVIDIA GeForce Experience, AMD Adrenalin, or Intel 
+      Arc Control.
+
+----------------------------------------------------------------------
+
+🟠 System Drive on HDD
+   Category: PERFORMANCE
+   Confidence: 90%
+
+   Windows is installed on a mechanical hard drive, which impacts game 
+   loading times
+
+   💡 Recommendation: Consider migrating Windows and games to an SSD 
+      for significantly faster loading
+
+----------------------------------------------------------------------
+
+✓ Report saved to: C:\Users\Username\Desktop\WinGamingDiag_Report_20240205_143022.txt
+```
+
+### HTML Report Preview
+The tool also generates beautiful, interactive HTML reports with:
+- Visual health score gauge
+- Issue breakdown with severity badges
+- Hardware specifications dashboard
+- Performance metrics visualization
+- Detailed findings with recommendations
+
+Open the HTML report in any modern browser for the best experience.
+
 ## Detected Issues
 
 The tool detects issues across multiple categories:
@@ -198,13 +290,15 @@ pytest tests/
 - [x] Network diagnostics - Latency tests and connectivity analysis
 - [x] Enhanced issue detection across all categories
 
-### Phase 3 (Planned)
-- [ ] HTML report generation
-- [ ] Historical tracking
-- [ ] Update checker integration
-- [ ] Custom rule definitions
-- [ ] Performance benchmarking
-- [ ] Temperature monitoring
+### Phase 3 (Complete)
+- [x] HTML report generation - Beautiful, interactive web-based reports
+- [x] Historical tracking - Track system health trends over time
+- [x] Update checker integration - Automatic update notifications
+- [x] Custom rule definitions - User-defined diagnostic rules
+- [x] Performance benchmarking - System performance testing
+- [x] Temperature monitoring - Thermal status tracking
+
+### Phase 4 (Future Vision)
 
 ### Phase 4 (Future Vision)
 - [ ] **AI-Powered Diagnostics**: Machine learning models to predict hardware failures before they happen
