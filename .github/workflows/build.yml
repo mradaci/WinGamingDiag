@@ -34,7 +34,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --console --name WinGamingDiag __main__.py
+        pyinstaller WinGamingDiag.spec
         
     - name: Test executable
       run: |
@@ -56,5 +56,3 @@ jobs:
         draft: false
         prerelease: false
         generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
