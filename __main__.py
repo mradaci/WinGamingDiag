@@ -8,14 +8,13 @@ import argparse
 from pathlib import Path
 
 # Handle frozen (PyInstaller) vs normal execution
-if getattr(sys, 'frozen', False):
-    # When frozen, the executable's directory is the root for bundled files.
-    # We add this directory to the path.
-    base_path = Path(sys.executable).parent
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    # When frozen, PyInstaller creates a temporary folder and stores its path in _MEIPASS.
+    # We add this temporary folder to the path.
+    base_path = Path(sys._MEIPASS)
     sys.path.insert(0, str(base_path))
 else:
     # When running as a script, the project root (parent of 'src') needs to be on the path.
-    # This file (__main__.py) is in the project root.
     base_path = Path(__file__).parent
     sys.path.insert(0, str(base_path))
 
