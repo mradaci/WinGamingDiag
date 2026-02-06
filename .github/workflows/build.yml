@@ -42,17 +42,24 @@ jobs:
         .\WinGamingDiag.exe --help
       continue-on-error: true
         
+    - name: Prepare Release Package
+      run: |
+        echo "@echo off" > dist/run.bat
+        echo "WinGamingDiag.exe %*" >> dist/run.bat
+        echo "pause" >> dist/run.bat
+        Compress-Archive -Path dist/WinGamingDiag.exe, dist/run.bat -DestinationPath dist/WinGamingDiag-Windows.zip
+      
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: WinGamingDiag-Windows
-        path: dist/WinGamingDiag.exe
+        name: WinGamingDiag-Windows-Package
+        path: dist/WinGamingDiag-Windows.zip
         
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
-        files: dist/WinGamingDiag.exe
+        files: dist/WinGamingDiag-Windows.zip
         draft: false
         prerelease: false
         generate_release_notes: true
