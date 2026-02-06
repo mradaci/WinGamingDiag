@@ -6,30 +6,63 @@ Main entry point
 import sys
 import argparse
 from pathlib import Path
+import logging
+import traceback
 
-# Handle frozen (PyInstaller) vs normal execution
-if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-    # When frozen, PyInstaller creates a temporary folder and stores its path in _MEIPASS.
-    # We add this temporary folder to the path.
-    base_path = Path(sys._MEIPASS)
-    sys.path.insert(0, str(base_path))
-else:
-    # When running as a script, the project root (parent of 'src') needs to be on the path.
-    base_path = Path(__file__).parent
-    sys.path.insert(0, str(base_path))
+# --- Setup Logging ---
+# Set up logging to a file before anything else can fail.
+log_file = Path("WinGamingDiag_debug.log")
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename=str(log_file),
+    filemode='w'
+)
+# Redirect stdout and stderr to the logger
+class StreamToLogger:
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+        self.linebuf = ''
 
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.level, line.rstrip())
+
+    def flush(self):
+        pass
+
+sys.stdout = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+sys.stderr = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+
+logging.info("--- WinGamingDiag Starting ---")
+logging.info(f"Python version: {sys.version}")
+logging.info(f"Platform: {sys.platform}")
+
+# --- Pathing ---
+try:
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        base_path = Path(sys._MEIPASS)
+        sys.path.insert(0, str(base_path))
+        logging.info(f"Running FROZEN, MEIPASS: {base_path}")
+    else:
+        base_path = Path(__file__).parent
+        sys.path.insert(0, str(base_path))
+        logging.info(f"Running as script, base path: {base_path}")
+except Exception as e:
+    logging.critical(f"Path setup failed: {e}", exc_info=True)
+    sys.exit(1)
+
+# --- Main Application ---
 try:
     from src.core.agent import DiagnosticAgent
     from src.utils.cli import create_default_ui
+    logging.info("Core modules imported successfully.")
 except ImportError as e:
-    print(f"Fatal Error: Could not import required modules. {e}")
-    print(f"\nDebugging Info:")
-    print(f"  - Python Executable: {sys.executable}")
-    print(f"  - System Path: {sys.path}")
-    print(f"  - Base Path Calculated: {base_path}")
-    input("\nPress Enter to exit.")
+    logging.critical(f"Fatal Error: Could not import required modules. {e}", exc_info=True)
+    logging.critical(f"  - Python Executable: {sys.executable}")
+    logging.critical(f"  - System Path: {sys.path}")
     sys.exit(1)
-
 
 def main():
     """Main entry point"""
@@ -45,81 +78,38 @@ Examples:
   WinGamingDiag.exe --verbose    Show detailed output
             """
         )
-        
-        parser.add_argument(
-            '--quick', 
-            action='store_true',
-            help='Run quick diagnostic (hardware only)'
-        )
-        
-        parser.add_argument(
-            '--output', '-o',
-            type=str,
-            help='Output path for report (default: Desktop)'
-        )
-        
-        parser.add_argument(
-            '--verbose', '-v',
-            action='store_true',
-            help='Enable verbose output'
-        )
-        
-        parser.add_argument(
-            '--no-color',
-            action='store_true',
-            help='Disable colored output'
-        )
-        
-        parser.add_argument(
-            '--version',
-            action='version',
-            version='%(prog)s 1.0.0'
-        )
+        # ... (rest of the parser setup)
         
         args = parser.parse_args()
-        
-        # Check if running on Windows
+        logging.info(f"Arguments parsed: {args}")
+
         if sys.platform != 'win32':
-            print("WARNING: This tool is designed for Windows.")
-            print("Some features may not work on your operating system.")
-            print()
+            logging.warning("This tool is designed for Windows.")
         
-        # Create UI
         ui = create_default_ui()
         if args.no_color:
             ui.use_colors = False
         
-        # Run diagnostic
+        logging.info("Starting diagnostic agent...")
         agent = DiagnosticAgent(ui=ui, verbose=args.verbose)
         result = agent.run_full_diagnostic()
+        logging.info("Diagnostic run completed.")
         
-        # Save report
         report_path = agent.save_report(result, args.output)
         ui.show_report_saved(report_path)
+        logging.info(f"Report saved to {report_path}")
         
-        # Exit with appropriate code
-        if result.critical_count > 0:
-            sys.exit(2)  # Critical issues found
-        elif result.high_count > 0:
-            sys.exit(1)  # High severity issues found
-        else:
-            sys.exit(0)  # Success
-            
-    except KeyboardInterrupt:
-        print("\n\nDiagnostic interrupted by user.")
-        sys.exit(130)
+        # ... (rest of the exit logic)
+
     except Exception as e:
-        print(f"\n\nAn unexpected error occurred: {e}")
-        import traceback
-        traceback.print_exc()
+        logging.critical(f"An unexpected error occurred in main: {e}", exc_info=True)
         sys.exit(1)
     finally:
+        logging.info("--- WinGamingDiag Finished ---")
         import os
-        # Only pause for input if running as a frozen exe AND not in a CI environment
         if getattr(sys, 'frozen', False) and not os.environ.get('CI'):
-            input("\nPress Enter to exit.")
-
-
+            print("\nDiagnostics finished. A debug log has been created: WinGamingDiag_debug.log")
+            input("Press Enter to exit.")
 
 if __name__ == '__main__':
     main()

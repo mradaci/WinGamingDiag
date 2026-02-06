@@ -45,7 +45,11 @@ jobs:
     - name: Prepare Release Package
       run: |
         echo "@echo off" > dist/run.bat
+        echo "echo Running WinGamingDiag..." >> dist/run.bat
+        echo "echo A debug log will be created at WinGamingDiag_debug.log" >> dist/run.bat
         echo "WinGamingDiag.exe %*" >> dist/run.bat
+        echo "echo." >> dist/run.bat
+        echo "echo WinGamingDiag has finished. The window will now pause." >> dist/run.bat
         echo "pause" >> dist/run.bat
         Compress-Archive -Path dist/WinGamingDiag.exe, dist/run.bat -DestinationPath dist/WinGamingDiag-Windows.zip
       
