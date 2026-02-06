@@ -7,11 +7,27 @@ import sys
 import argparse
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+# Handle frozen (PyInstaller) vs normal execution
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    base_path = Path(sys.executable).parent
+else:
+    # Running as script
+    base_path = Path(__file__).parent
 
-from src.core.agent import DiagnosticAgent
-from src.utils.cli import create_default_ui
+# Add src to path for imports
+src_path = str(base_path / 'src')
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
+try:
+    from src.core.agent import DiagnosticAgent
+    from src.utils.cli import create_default_ui
+except ImportError as e:
+    print(f"Error importing modules: {e}")
+    print(f"Python path: {sys.path}")
+    print(f"Base path: {base_path}")
+    sys.exit(1)
 
 
 def main():

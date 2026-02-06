@@ -1,20 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
+from pathlib import Path
+
+# Add src to path
+src_path = str(Path(__file__).parent / 'src')
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
 block_cipher = None
 
 a = Analysis(
     ['__main__.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=[],
     hiddenimports=[
+        'src',
+        'src.core',
         'src.core.agent',
+        'src.collectors',
         'src.collectors.hardware',
         'src.collectors.event_logs',
         'src.collectors.drivers',
         'src.collectors.launchers',
         'src.collectors.network',
         'src.models',
+        'src.utils',
         'src.utils.cli',
         'src.utils.wmi_helper',
         'src.utils.redaction',
@@ -22,6 +33,7 @@ a = Analysis(
         'src.utils.updater',
         'src.utils.benchmark',
         'src.core.rules',
+        'src.reports',
         'src.reports.html_generator',
     ],
     hookspath=[],
