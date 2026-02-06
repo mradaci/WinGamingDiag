@@ -56,18 +56,30 @@ class WMIHelper:
         if self._is_available is not None:
             return self._is_available
             
+        logging.info("WMI: Checking for availability...")
         if sys.platform != 'win32':
+            logging.warning("WMI: Not on Windows, WMI is not available.")
             self._is_available = False
             return False
             
         try:
+            logging.info("WMI: Attempting to import 'wmi' module...")
             import wmi
+            logging.info("WMI: 'wmi' module imported successfully.")
+            
+            logging.info("WMI: Initializing WMI connection...")
             c = wmi.WMI()
+            logging.info("WMI: Connection successful. Performing test query...")
+            
             # Test with a simple query
             _ = c.Win32_ComputerSystem()[0]
+            logging.info("WMI: Test query for Win32_ComputerSystem successful.")
+            
             self._is_available = True
+            logging.info("WMI: Availability check PASSED.")
             return True
-        except Exception:
+        except Exception as e:
+            logging.critical(f"WMI: Availability check FAILED. Error: {e}", exc_info=True)
             self._is_available = False
             return False
     
@@ -283,77 +295,6 @@ class WMIHelper:
         """Get startup program information"""
         result = self.query("Win32_StartupCommand")
         return result.data if result.success and result.data is not None else []
-    
-    def get_memory_info(self) -> List[Dict[str, Any]]:
-        """Get physical memory information"""
-        result = self.query("Win32_PhysicalMemory")
-        return result.data if result.success else []
-    
-    def get_video_controller_info(self) -> List[Dict[str, Any]]:
-        """Get video controller/GPU information"""
-        result = self.query("Win32_VideoController")
-        return result.data if result.success else []
-    
-    def get_disk_drive_info(self) -> List[Dict[str, Any]]:
-        """Get disk drive information"""
-        result = self.query("Win32_DiskDrive")
-        return result.data if result.success else []
-    
-    def get_logical_disk_info(self) -> List[Dict[str, Any]]:
-        """Get logical disk (partition) information"""
-        result = self.query("Win32_LogicalDisk")
-        return result.data if result.success else []
-    
-    def get_baseboard_info(self) -> Dict[str, Any]:
-        """Get motherboard information"""
-        result = self.query("Win32_BaseBoard", first_only=True)
-        return result.data if result.success else {}
-    
-    def get_bios_info(self) -> Dict[str, Any]:
-        """Get BIOS/UEFI information"""
-        result = self.query("Win32_BIOS", first_only=True)
-        return result.data if result.success else {}
-    
-    def get_fan_info(self) -> List[Dict[str, Any]]:
-        """Get cooling fan information"""
-        result = self.query("Win32_Fan")
-        return result.data if result.success else []
-    
-    def get_temperature_info(self) -> List[Dict[str, Any]]:
-        """Get temperature sensor information"""
-        result = self.query("Win32_TemperatureProbe")
-        return result.data if result.success else []
-    
-    def get_battery_info(self) -> Optional[Dict[str, Any]]:
-        """Get battery information (for laptops)"""
-        result = self.query("Win32_Battery", first_only=True)
-        return result.data if result.success else None
-    
-    def get_network_adapter_info(self) -> List[Dict[str, Any]]:
-        """Get network adapter information"""
-        result = self.query("Win32_NetworkAdapter", 
-                          where_clause="NetEnabled=True")
-        return result.data if result.success else []
-    
-    def get_pnp_device_info(self) -> List[Dict[str, Any]]:
-        """Get Plug and Play device information"""
-        result = self.query("Win32_PnPEntity")
-        return result.data if result.success else []
-    
-    def get_service_info(self) -> List[Dict[str, Any]]:
-        """Get Windows service information"""
-        result = self.query("Win32_Service")
-        return result.data if result.success else []
-    
-    def get_process_info(self) -> List[Dict[str, Any]]:
-        """Get running process information"""
-        result = self.query("Win32_Process")
-        return result.data if result.success else []
-    
-    def get_startup_command_info(self) -> List[Dict[str, Any]]:
-        """Get startup program information"""
-        result = self.query("Win32_StartupCommand")
-        return result.data if result.success else []
     
     @staticmethod
     def safe_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:

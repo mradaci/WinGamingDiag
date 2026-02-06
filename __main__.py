@@ -134,8 +134,9 @@ Examples:
         logging.info(f"Report saved to {report_path}")
         
         # ... (rest of the exit logic)
-
-    except Exception as e:
+        logging.info("Graceful finish.")
+ 
+     except Exception as e:
         logging.critical(f"An unexpected error occurred in main: {e}", exc_info=True)
         sys.exit(1)
     finally:
