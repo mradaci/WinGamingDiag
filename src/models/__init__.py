@@ -270,6 +270,12 @@ class SystemSnapshot:
     collectors_used: List[str] = field(default_factory=list)
     errors_encountered: List[str] = field(default_factory=list)
     
+    # Phase 2 Results (stored as Any to avoid circular imports)
+    event_summary: Any = None
+    driver_result: Any = None
+    launcher_result: Any = None
+    network_result: Any = None
+    
     def __post_init__(self):
         if self.timestamp is None:
             self.timestamp = datetime.now()

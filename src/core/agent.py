@@ -16,6 +16,10 @@ from ..models import (
     IssueCategory, Evidence, WindowsInfo, HardwareSnapshot
 )
 from ..collectors.hardware import HardwareCollector
+from ..collectors.event_logs import EventLogCollector, EventLogSummary
+from ..collectors.drivers import DriverCompatibilityChecker, DriverCompatibilityResult
+from ..collectors.launchers import GameLauncherDetector, GameLauncherResult
+from ..collectors.network import NetworkDiagnostics, NetworkDiagnosticsResult
 from ..utils.wmi_helper import WMIHelper, get_wmi_helper
 from ..utils.redaction import get_redactor
 from ..utils.cli import ConsoleUI, create_default_ui
@@ -42,6 +46,10 @@ class DiagnosticAgent:
         
         # Collectors
         self.hardware_collector = HardwareCollector(self.wmi_helper)
+        self.event_collector = EventLogCollector(self.wmi_helper)
+        self.driver_checker = DriverCompatibilityChecker(self.wmi_helper)
+        self.launcher_detector = GameLauncherDetector(self.wmi_helper)
+        self.network_diagnostics = NetworkDiagnostics(self.wmi_helper)
         
         # Results
         self.snapshot: Optional[SystemSnapshot] = None
@@ -68,6 +76,22 @@ class DiagnosticAgent:
         self.ui.subheader("Collecting Hardware Information")
         hardware_snapshot = self._collect_hardware_info()
         
+        # Phase 3: Collect event logs (Phase 2)
+        self.ui.subheader("Analyzing System Event Logs")
+        event_summary = self._collect_event_logs()
+        
+        # Phase 4: Check driver compatibility (Phase 2)
+        self.ui.subheader("Checking Driver Compatibility")
+        driver_result = self._check_drivers()
+        
+        # Phase 5: Detect game launchers (Phase 2)
+        self.ui.subheader("Detecting Game Launchers")
+        launcher_result = self._detect_launchers()
+        
+        # Phase 6: Network diagnostics (Phase 2)
+        self.ui.subheader("Running Network Diagnostics")
+        network_result = self._run_network_diagnostics()
+        
         # Create system snapshot
         collection_duration = time.time() - start_time
         self.snapshot = SystemSnapshot(
@@ -75,11 +99,17 @@ class DiagnosticAgent:
             hardware=hardware_snapshot,
             windows=windows_info,
             collection_duration_seconds=collection_duration,
-            collectors_used=['hardware', 'windows'],
+            collectors_used=['hardware', 'windows', 'event_logs', 'drivers', 'launchers', 'network'],
             errors_encountered=self.errors
         )
         
-        self.ui.show_collection_complete(collection_duration, 2)
+        # Store Phase 2 results in snapshot for later analysis
+        self.snapshot.event_summary = event_summary
+        self.snapshot.driver_result = driver_result
+        self.snapshot.launcher_result = launcher_result
+        self.snapshot.network_result = network_result
+        
+        self.ui.show_collection_complete(collection_duration, 6)
         
         # Phase 3: Analyze for issues
         self.ui.show_analysis_start()
@@ -186,6 +216,96 @@ class DiagnosticAgent:
             self.ui.error(f"Error collecting hardware info: {e}")
             return HardwareSnapshot()
     
+    def _collect_event_logs(self) -> EventLogSummary:
+        """Collect and analyze event logs"""
+        try:
+            summary = self.event_collector.collect_all()
+            
+            # Collect errors
+            event_errors = self.event_collector.get_errors()
+            self.errors.extend(event_errors)
+            
+            # Show summary
+            if summary.gaming_related_events:
+                self.ui.info(f"Found {len(summary.gaming_related_events)} gaming-related events")
+            if summary.recent_crashes:
+                self.ui.warning(f"Detected {len(summary.recent_crashes)} recent crashes")
+            
+            return summary
+            
+        except Exception as e:
+            self.errors.append(f"Event log collection error: {e}")
+            self.ui.error(f"Error collecting event logs: {e}")
+            return EventLogSummary()
+    
+    def _check_drivers(self) -> DriverCompatibilityResult:
+        """Check driver compatibility"""
+        try:
+            result = self.driver_checker.check_all_drivers()
+            
+            # Collect errors
+            driver_errors = self.driver_checker.get_errors()
+            self.errors.extend(driver_errors)
+            
+            # Show summary
+            if result.critical > 0:
+                self.ui.warning(f"{result.critical} critical driver(s) need attention")
+            if result.update_available > 0:
+                self.ui.info(f"{result.update_available} driver update(s) available")
+            
+            return result
+            
+        except Exception as e:
+            self.errors.append(f"Driver check error: {e}")
+            self.ui.error(f"Error checking drivers: {e}")
+            return DriverCompatibilityResult()
+    
+    def _detect_launchers(self) -> GameLauncherResult:
+        """Detect game launchers"""
+        try:
+            result = self.launcher_detector.detect_all_launchers()
+            
+            # Collect errors
+            launcher_errors = self.launcher_detector.get_errors()
+            self.errors.extend(launcher_errors)
+            
+            # Show summary
+            if result.installed_launchers:
+                self.ui.success(f"Found {len(result.installed_launchers)} game launcher(s)")
+                self.ui.info(f"Total games detected: {result.total_games}")
+            
+            return result
+            
+        except Exception as e:
+            self.errors.append(f"Launcher detection error: {e}")
+            self.ui.error(f"Error detecting launchers: {e}")
+            return GameLauncherResult()
+    
+    def _run_network_diagnostics(self) -> NetworkDiagnosticsResult:
+        """Run network diagnostics"""
+        try:
+            result = self.network_diagnostics.run_diagnostics()
+            
+            # Collect errors
+            network_errors = self.network_diagnostics.get_errors()
+            self.errors.extend(network_errors)
+            
+            # Show summary
+            if result.is_connected:
+                conn_type = result.connection_type.value if result.connection_type else "unknown"
+                self.ui.success(f"Network connected via {conn_type}")
+                if result.dns_latency_ms:
+                    self.ui.info(f"DNS latency: {result.dns_latency_ms:.1f}ms")
+            else:
+                self.ui.warning("No network connection detected")
+            
+            return result
+            
+        except Exception as e:
+            self.errors.append(f"Network diagnostics error: {e}")
+            self.ui.error(f"Error running network diagnostics: {e}")
+            return NetworkDiagnosticsResult()
+    
     def _analyze_for_issues(self) -> List[Issue]:
         """Analyze collected data for issues"""
         issues = []
@@ -213,6 +333,26 @@ class DiagnosticAgent:
             for storage in self.snapshot.hardware.storage_devices:
                 storage_issues = self._analyze_storage(storage)
                 issues.extend(storage_issues)
+        
+        # Phase 2: Analyze Event Logs
+        if self.snapshot and self.snapshot.event_summary:
+            event_issues = self._analyze_event_logs(self.snapshot.event_summary)
+            issues.extend(event_issues)
+        
+        # Phase 2: Analyze Drivers
+        if self.snapshot and self.snapshot.driver_result:
+            driver_issues = self._analyze_drivers(self.snapshot.driver_result)
+            issues.extend(driver_issues)
+        
+        # Phase 2: Analyze Launchers
+        if self.snapshot and self.snapshot.launcher_result:
+            launcher_issues = self._analyze_launchers(self.snapshot.launcher_result)
+            issues.extend(launcher_issues)
+        
+        # Phase 2: Analyze Network
+        if self.snapshot and self.snapshot.network_result:
+            network_issues = self._analyze_network(self.snapshot.network_result)
+            issues.extend(network_issues)
         
         return issues
     
@@ -413,6 +553,267 @@ class DiagnosticAgent:
         
         return issues
     
+    def _analyze_event_logs(self, event_summary) -> List[Issue]:
+        """Analyze event logs for issues"""
+        issues = []
+        
+        # Check for recent crashes
+        if event_summary.recent_crashes:
+            crash_count = len(event_summary.recent_crashes)
+            if crash_count >= 3:
+                issues.append(Issue(
+                    id="",
+                    title=f"Frequent Application Crashes ({crash_count} in last {event_summary.analysis_period_days} days)",
+                    description=f"Detected {crash_count} application crashes or hangs in the past {event_summary.analysis_period_days} days",
+                    category=IssueCategory.STABILITY,
+                    severity=IssueSeverity.HIGH,
+                    confidence=0.90,
+                    recommendation="Check for overheating, update drivers, verify game files, check for conflicting software",
+                    evidence=[
+                        Evidence(
+                            source="Event Log",
+                            data={"crash_count": crash_count, "period_days": event_summary.analysis_period_days},
+                            raw_value=str(crash_count)
+                        )
+                    ]
+                ))
+        
+        # Check for gaming-related events
+        if event_summary.gaming_related_events:
+            gaming_event_count = len(event_summary.gaming_related_events)
+            if gaming_event_count > 0:
+                issues.append(Issue(
+                    id="",
+                    title=f"Gaming-Related System Events ({gaming_event_count})",
+                    description=f"Found {gaming_event_count} gaming-related events in system logs",
+                    category=IssueCategory.GAMING,
+                    severity=IssueSeverity.LOW,
+                    confidence=0.75,
+                    recommendation="Review Windows Event Viewer for more details on these events",
+                    evidence=[
+                        Evidence(
+                            source="Event Log",
+                            data={"gaming_events": gaming_event_count},
+                            raw_value=str(gaming_event_count)
+                        )
+                    ]
+                ))
+        
+        return issues
+    
+    def _analyze_drivers(self, driver_result) -> List[Issue]:
+        """Analyze drivers for issues"""
+        issues = []
+        
+        # Check for critical driver issues
+        if driver_result.critical > 0:
+            issues.append(Issue(
+                id="",
+                title=f"Critical Driver Issues ({driver_result.critical})",
+                description=f"Found {driver_result.critical} critical driver(s) that require immediate attention",
+                category=IssueCategory.HARDWARE,
+                severity=IssueSeverity.CRITICAL,
+                confidence=0.95,
+                recommendation="Update critical drivers immediately from manufacturer websites. GPU drivers are especially important for gaming.",
+                evidence=[
+                    Evidence(
+                        source="Driver Check",
+                        data={"critical_count": driver_result.critical},
+                        raw_value=str(driver_result.critical)
+                    )
+                ]
+            ))
+        
+        # Check for outdated drivers
+        if driver_result.outdated > 0:
+            issues.append(Issue(
+                id="",
+                title=f"Outdated Drivers ({driver_result.outdated})",
+                description=f"Detected {driver_result.outdated} outdated driver(s)",
+                category=IssueCategory.HARDWARE,
+                severity=IssueSeverity.MEDIUM,
+                confidence=0.85,
+                recommendation="Update drivers for better performance and stability. Check manufacturer websites for latest versions.",
+                evidence=[
+                    Evidence(
+                        source="Driver Check",
+                        data={"outdated_count": driver_result.outdated},
+                        raw_value=str(driver_result.outdated)
+                    )
+                ]
+            ))
+        
+        # GPU driver specific check
+        gpu_outdated = sum(1 for d in driver_result.gpu_drivers if hasattr(d, 'status') and d.status.value in ['update_available', 'outdated'])
+        if gpu_outdated > 0:
+            issues.append(Issue(
+                id="",
+                title="GPU Driver Update Available",
+                description="Your graphics driver is not up to date",
+                category=IssueCategory.GAMING,
+                severity=IssueSeverity.HIGH,
+                confidence=0.90,
+                recommendation="Update GPU driver for better game performance and bug fixes. Use NVIDIA GeForce Experience, AMD Adrenalin, or Intel Arc Control.",
+                evidence=[
+                    Evidence(
+                        source="Driver Check",
+                        data={"gpu_outdated": True},
+                        raw_value="GPU driver outdated"
+                    )
+                ]
+            ))
+        
+        return issues
+    
+    def _analyze_launchers(self, launcher_result) -> List[Issue]:
+        """Analyze game launchers for issues"""
+        issues = []
+        
+        # Check for multiple overlays
+        overlays_enabled = sum(1 for l in launcher_result.installed_launchers if hasattr(l, 'overlay_enabled') and l.overlay_enabled)
+        if overlays_enabled > 1:
+            issues.append(Issue(
+                id="",
+                title=f"Multiple Overlays Enabled ({overlays_enabled})",
+                description="Multiple game launcher overlays are enabled, which may cause conflicts",
+                category=IssueCategory.GAMING,
+                severity=IssueSeverity.MEDIUM,
+                confidence=0.80,
+                recommendation="Disable overlays for launchers you don't use frequently. Steam, Discord, and NVIDIA overlays can conflict.",
+                evidence=[
+                    Evidence(
+                        source="Launcher Detection",
+                        data={"overlays_enabled": overlays_enabled},
+                        raw_value=str(overlays_enabled)
+                    )
+                ]
+            ))
+        
+        # Check for storage issues
+        if launcher_result.storage_used_gb > 500:
+            issues.append(Issue(
+                id="",
+                title=f"Large Game Library ({launcher_result.storage_used_gb:.1f} GB)",
+                description="Your game library is consuming significant storage space",
+                category=IssueCategory.PERFORMANCE,
+                severity=IssueSeverity.LOW,
+                confidence=0.85,
+                recommendation="Consider archiving unused games or moving them to external storage to free up space",
+                evidence=[
+                    Evidence(
+                        source="Launcher Detection",
+                        data={"storage_used_gb": launcher_result.storage_used_gb},
+                        raw_value=f"{launcher_result.storage_used_gb:.1f} GB"
+                    )
+                ]
+            ))
+        
+        # Check for auto-start launchers
+        auto_start_count = sum(1 for l in launcher_result.installed_launchers if hasattr(l, 'auto_start') and l.auto_start)
+        if auto_start_count > 2:
+            issues.append(Issue(
+                id="",
+                title=f"Too Many Auto-Start Launchers ({auto_start_count})",
+                description=f"{auto_start_count} game launchers are set to start with Windows",
+                category=IssueCategory.PERFORMANCE,
+                severity=IssueSeverity.LOW,
+                confidence=0.75,
+                recommendation="Disable auto-start for launchers you don't use frequently to improve boot time",
+                evidence=[
+                    Evidence(
+                        source="Launcher Detection",
+                        data={"auto_start_count": auto_start_count},
+                        raw_value=str(auto_start_count)
+                    )
+                ]
+            ))
+        
+        return issues
+    
+    def _analyze_network(self, network_result) -> List[Issue]:
+        """Analyze network configuration for issues"""
+        issues = []
+        
+        # Check connectivity
+        if not network_result.is_connected:
+            issues.append(Issue(
+                id="",
+                title="No Network Connection",
+                description="System is not connected to a network",
+                category=IssueCategory.NETWORK,
+                severity=IssueSeverity.CRITICAL,
+                confidence=0.99,
+                recommendation="Check network cable, WiFi connection, or contact your ISP",
+                evidence=[
+                    Evidence(
+                        source="Network Diagnostics",
+                        data={"connected": False},
+                        raw_value="Not connected"
+                    )
+                ]
+            ))
+            return issues
+        
+        # Check connection type
+        if network_result.connection_type and network_result.connection_type.value == 'wifi':
+            issues.append(Issue(
+                id="",
+                title="WiFi Connection Detected",
+                description="Using WiFi connection which may have higher latency and packet loss",
+                category=IssueCategory.NETWORK,
+                severity=IssueSeverity.LOW,
+                confidence=0.85,
+                recommendation="Consider using Ethernet connection for better gaming performance and lower latency",
+                evidence=[
+                    Evidence(
+                        source="Network Diagnostics",
+                        data={"connection_type": "wifi"},
+                        raw_value="WiFi"
+                    )
+                ]
+            ))
+        
+        # Check DNS latency
+        if network_result.dns_latency_ms and network_result.dns_latency_ms > 100:
+            issues.append(Issue(
+                id="",
+                title="High DNS Latency",
+                description=f"DNS resolution is slow ({network_result.dns_latency_ms:.0f}ms)",
+                category=IssueCategory.NETWORK,
+                severity=IssueSeverity.MEDIUM,
+                confidence=0.80,
+                recommendation="Consider switching to Google DNS (8.8.8.8) or Cloudflare DNS (1.1.1.1)",
+                evidence=[
+                    Evidence(
+                        source="Network Diagnostics",
+                        data={"dns_latency_ms": network_result.dns_latency_ms},
+                        raw_value=f"{network_result.dns_latency_ms:.0f}ms"
+                    )
+                ]
+            ))
+        
+        # Check for gaming server latency issues
+        high_latency_servers = [s for s in network_result.gaming_servers if s.avg_ms > 150]
+        if high_latency_servers:
+            issues.append(Issue(
+                id="",
+                title="High Latency to Gaming Servers",
+                description=f"High ping detected to {len(high_latency_servers)} gaming server(s)",
+                category=IssueCategory.NETWORK,
+                severity=IssueSeverity.MEDIUM,
+                confidence=0.75,
+                recommendation="High latency may affect online gaming. Check your internet connection or consider a gaming VPN",
+                evidence=[
+                    Evidence(
+                        source="Network Diagnostics",
+                        data={"high_latency_count": len(high_latency_servers)},
+                        raw_value=f"{len(high_latency_servers)} servers"
+                    )
+                ]
+            ))
+        
+        return issues
+    
     def _display_results(self, result: DiagnosticResult):
         """Display diagnostic results to user"""
         self.ui.show_health_score(result.health_score)
@@ -447,13 +848,17 @@ class DiagnosticAgent:
         Returns:
             Path to saved report
         """
+        # Determine output path
         if output_path is None:
             # Default to Desktop
             desktop = Path.home() / "Desktop"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = desktop / f"WinGamingDiag_Report_{timestamp}.txt"
+            output_file = desktop / f"WinGamingDiag_Report_{timestamp}.txt"
+        else:
+            output_file = Path(output_path)
         
-        output_path = Path(output_path)
+        # Ensure parent directory exists
+        output_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Generate report content
         report_lines = [
@@ -522,11 +927,10 @@ class DiagnosticAgent:
             ])
         
         # Write report
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(str(output_file), 'w', encoding='utf-8') as f:
             f.write('\n'.join(report_lines))
         
-        return str(output_path)
+        return str(output_file)
 
 
 __all__ = ['DiagnosticAgent']

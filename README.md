@@ -10,6 +10,13 @@ A comprehensive, portable diagnostic tool for Windows gaming systems. Analyzes h
 - **Performance Monitoring**: Memory usage, disk space, thermal status
 - **Gaming-Specific Checks**: Graphics APIs, game launchers, overlays, anti-cheat
 
+### Phase 2 - Advanced Diagnostics
+- **Event Log Analysis**: Detect application crashes, system errors, and gaming-related events
+- **Driver Compatibility**: Check GPU, audio, and system drivers against latest versions
+- **Game Launcher Detection**: Identify Steam, Epic Games, Xbox, and other launchers
+- **Network Diagnostics**: Test latency, check connectivity, identify network issues
+- **Storage Analysis**: Game library size detection and storage optimization recommendations
+
 ### Key Capabilities
 - **Read-Only Operation**: Never modifies system state
 - **Portable**: Single executable, no installation required
@@ -67,7 +74,11 @@ WinGamingDiag/
 │   ├── core/
 │   │   └── agent.py          # Main orchestrator
 │   ├── collectors/
-│   │   └── hardware.py       # Hardware detection
+│   │   ├── hardware.py       # Hardware detection
+│   │   ├── event_logs.py     # Event log analysis (Phase 2)
+│   │   ├── drivers.py        # Driver compatibility (Phase 2)
+│   │   ├── launchers.py      # Game launcher detection (Phase 2)
+│   │   └── network.py        # Network diagnostics (Phase 2)
 │   ├── models/
 │   │   └── __init__.py       # Data models
 │   └── utils/
@@ -99,6 +110,13 @@ The tool detects issues across multiple categories:
 - Missing redistributables
 - Overlay conflicts
 - Anti-cheat issues
+
+### Phase 2 - Advanced Detection
+- **Event Log Analysis**: Application crashes, system hangs, BSOD patterns
+- **Driver Issues**: Outdated drivers, unsigned drivers, missing GPU updates
+- **Launcher Conflicts**: Multiple overlays enabled, auto-start bloat
+- **Network Problems**: High latency, WiFi vs Ethernet, DNS issues
+- **Storage**: Large game libraries, insufficient space for updates
 
 ### Configuration
 - Suboptimal power settings
@@ -167,23 +185,26 @@ pytest tests/
 
 ## Roadmap
 
-### Phase 1 (Current)
+### Phase 1 (Complete)
 - [x] Core hardware detection
 - [x] Basic issue analysis
 - [x] Text report generation
 - [x] Privacy protection
 
-### Phase 2 (Planned)
-- [ ] Event log analysis
-- [ ] Driver compatibility checking
-- [ ] Game launcher detection
-- [ ] Network diagnostics
+### Phase 2 (Current)
+- [x] Event log analysis - Detect crashes and gaming-related errors
+- [x] Driver compatibility checking - Version comparison and update recommendations
+- [x] Game launcher detection - Steam, Epic, Xbox, and others
+- [x] Network diagnostics - Latency tests and connectivity analysis
+- [x] Enhanced issue detection across all categories
 
-### Phase 3 (Future)
+### Phase 3 (Planned)
 - [ ] HTML report generation
 - [ ] Historical tracking
 - [ ] Update checker integration
 - [ ] Custom rule definitions
+- [ ] Performance benchmarking
+- [ ] Temperature monitoring
 
 ## Contributing
 
