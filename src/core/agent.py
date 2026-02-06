@@ -197,24 +197,75 @@ class DiagnosticAgent:
             activation_status='Unknown'
         )
     
-    def _collect_hardware_info(self) -> HardwareSnapshot:
-        """Collect hardware information"""
-        progress = self.ui.progress_bar(6, title="Collecting Hardware Data")
+import subprocess
+import json
+import tempfile
+
+# ... (inside DiagnosticAgent class)
+
+    def _collect_hardware_info_subprocess(self) -> HardwareSnapshot:
+        """Runs the hardware collector in a separate process to isolate crashes."""
+        logging.info("Hardware Collector: Starting subprocess.")
+        snapshot = HardwareSnapshot()
         
         try:
-            snapshot = self.hardware_collector.collect_all()
-            progress.finish("Hardware collection complete")
+            # Determine the path to the collector script
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                # In a frozen app, the script is bundled with the exe
+                base_path = Path(sys._MEIPASS)
+                collector_script_path = base_path / 'src' / 'collectors' / 'collector_script.py'
+            else:
+                base_path = Path(__file__).parent.parent
+                collector_script_path = base_path / 'collectors' / 'collector_script.py'
             
-            # Collect any errors from hardware collector
-            hw_errors = self.hardware_collector.get_errors()
-            self.errors.extend(hw_errors)
+            # Create a temporary file for the output
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as tmpfile:
+                output_path = tmpfile.name
             
-            return snapshot
-            
+            logging.info(f"Hardware Collector: Subprocess script path: {collector_script_path}")
+            logging.info(f"Hardware Collector: Subprocess output file: {output_path}")
+
+            # Run the collector script as a subprocess
+            process = subprocess.run(
+                [sys.executable, str(collector_script_path), output_path],
+                capture_output=True,
+                text=True,
+                timeout=120  # 2-minute timeout
+            )
+
+            if process.returncode == 0:
+                logging.info("Hardware Collector: Subprocess completed successfully.")
+                # Read the output from the temporary file
+                with open(output_path, 'r') as f:
+                    data = json.load(f)
+                
+                # Reconstruct the HardwareSnapshot from the dictionary
+                # This needs to be more robust, parsing each dataclass
+                snapshot = HardwareSnapshot.from_dict(data)
+                self.errors.extend(data.get('errors', []))
+
+            else:
+                logging.error(f"Hardware Collector: Subprocess failed with return code {process.returncode}.")
+                logging.error(f"Subprocess stdout: {process.stdout}")
+                logging.error(f"Subprocess stderr: {process.stderr}")
+                self.errors.append("Hardware collection subprocess failed.")
+
+            # Clean up the temporary file
+            Path(output_path).unlink()
+
+        except subprocess.TimeoutExpired:
+            logging.error("Hardware Collector: Subprocess timed out.")
+            self.errors.append("Hardware collection timed out.")
         except Exception as e:
-            self.errors.append(f"Hardware collection error: {e}")
-            self.ui.error(f"Error collecting hardware info: {e}")
-            return HardwareSnapshot()
+            logging.critical("Hardware Collector: Failed to run subprocess.", exc_info=True)
+            self.errors.append(f"Failed to execute hardware collector subprocess: {e}")
+            
+        return snapshot
+
+    def _collect_hardware_info(self) -> HardwareSnapshot:
+        """Collect hardware information using the subprocess method."""
+        return self._collect_hardware_info_subprocess()
+
     
     def _collect_event_logs(self) -> EventLogSummary:
         """Collect and analyze event logs"""

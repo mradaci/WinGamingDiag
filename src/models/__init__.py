@@ -231,6 +231,20 @@ class HardwareSnapshot:
     monitors: List[Dict[str, Any]] = field(default_factory=list)
     peripherals: List[Dict[str, Any]] = field(default_factory=list)
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'HardwareSnapshot':
+        """Creates a HardwareSnapshot from a dictionary."""
+        return cls(
+            cpu=CPUInfo(**data['cpu']) if data.get('cpu') else None,
+            memory=MemoryInfo(**data['memory']) if data.get('memory') else None,
+            gpus=[GPUInfo(**gpu_data) for gpu_data in data.get('gpus', [])],
+            storage_devices=[StorageInfo(**storage_data) for storage_data in data.get('storage_devices', [])],
+            motherboard=MotherboardInfo(**data['motherboard']) if data.get('motherboard') else None,
+            cooling=CoolingInfo(**data['cooling']) if data.get('cooling') else None,
+            power=PowerInfo(**data['power']) if data.get('power') else None,
+        )
+
+
 
 @dataclass
 class WindowsInfo:

@@ -6,7 +6,7 @@ a = Analysis(
     ['__main__.py'],
     pathex=['.'],
     binaries=[],
-    datas=[('src', 'src')],
+    datas=[('src', 'src'), ('src/collectors/collector_script.py', 'src/collectors')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
