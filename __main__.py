@@ -114,7 +114,9 @@ Examples:
         traceback.print_exc()
         sys.exit(1)
     finally:
-        if getattr(sys, 'frozen', False):
+        import os
+        # Only pause for input if running as a frozen exe AND not in a CI environment
+        if getattr(sys, 'frozen', False) and not os.environ.get('CI'):
             input("\nPress Enter to exit.")
 
 
