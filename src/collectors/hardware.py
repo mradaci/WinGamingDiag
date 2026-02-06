@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import platform
 import sys
+import logging
 
 from ..models import (
     CPUInfo, MemoryInfo, GPUInfo, StorageInfo, MotherboardInfo,
@@ -42,40 +43,50 @@ class HardwareCollector:
         """
         snapshot = HardwareSnapshot()
         
+        # Each collection is wrapped in a try/except to prevent a single failing component
+        # from stopping the entire process.
+        
         try:
             snapshot.cpu = self.collect_cpu_info()
         except Exception as e:
             self.errors.append(f"CPU collection failed: {e}")
+            logging.error("CPU collection failed.", exc_info=True)
         
         try:
             snapshot.memory = self.collect_memory_info()
         except Exception as e:
             self.errors.append(f"Memory collection failed: {e}")
+            logging.error("Memory collection failed.", exc_info=True)
         
         try:
             snapshot.gpus = self.collect_gpu_info()
         except Exception as e:
             self.errors.append(f"GPU collection failed: {e}")
+            logging.error("GPU collection failed.", exc_info=True)
         
         try:
             snapshot.storage_devices = self.collect_storage_info()
         except Exception as e:
             self.errors.append(f"Storage collection failed: {e}")
+            logging.error("Storage collection failed.", exc_info=True)
         
         try:
             snapshot.motherboard = self.collect_motherboard_info()
         except Exception as e:
             self.errors.append(f"Motherboard collection failed: {e}")
+            logging.error("Motherboard collection failed.", exc_info=True)
         
         try:
             snapshot.cooling = self.collect_cooling_info()
         except Exception as e:
             self.errors.append(f"Cooling collection failed: {e}")
+            logging.error("Cooling collection failed.", exc_info=True)
         
         try:
             snapshot.power = self.collect_power_info()
         except Exception as e:
             self.errors.append(f"Power collection failed: {e}")
+            logging.error("Power collection failed.", exc_info=True)
         
         return snapshot
     
