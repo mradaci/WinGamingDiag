@@ -1,0 +1,17 @@
+# WinGamingDiag - Windows Gaming Diagnostic Agent
+# Python Dependencies
+
+# Windows Management Instrumentation
+WMI>=1.5.1
+pywin32>=227; platform_system=="Windows"
+
+# Optional: Enhanced hardware detection (Windows only)
+psutil>=5.8.0
+
+# Build tools (for creating executable)
+pyinstaller>=5.0; platform_system=="Windows"
+
+# Development dependencies (optional)
+pytest>=7.0.0; extra == "dev"
+black>=22.0.0; extra == "dev"
+mypy>=0.950; extra == "dev"
