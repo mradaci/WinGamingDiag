@@ -5,7 +5,7 @@ Privacy protection by redacting sensitive data from logs and reports
 
 import re
 import hashlib
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Callable
 from dataclasses import dataclass
 
 
@@ -14,7 +14,7 @@ class RedactionRule:
     """Rule for redacting sensitive data"""
     name: str
     pattern: str
-    replacement: str
+    replacement: Union[str, Callable]
     description: str
 
 
@@ -194,7 +194,7 @@ class SecretRedactor:
     def redact_path(self, path: str) -> str:
         """
         Redact username from file paths
-        C:\Users\JohnDoe\Documents -> C:\Users\USER_abc12345\Documents
+        r"C:\Users\JohnDoe\Documents -> C:\Users\USER_abc12345\Documents"
         """
         # Match Windows user paths
         windows_pattern = r'(C:\\Users\\|/Users/)([^/\\]+)([/\\])'
