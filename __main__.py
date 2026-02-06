@@ -9,24 +9,26 @@ from pathlib import Path
 
 # Handle frozen (PyInstaller) vs normal execution
 if getattr(sys, 'frozen', False):
-    # Running as compiled executable
+    # When frozen, the executable's directory is the root for bundled files.
+    # We add this directory to the path.
     base_path = Path(sys.executable).parent
+    sys.path.insert(0, str(base_path))
 else:
-    # Running as script
+    # When running as a script, the project root (parent of 'src') needs to be on the path.
+    # This file (__main__.py) is in the project root.
     base_path = Path(__file__).parent
-
-# Add src to path for imports
-src_path = str(base_path / 'src')
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
+    sys.path.insert(0, str(base_path))
 
 try:
     from src.core.agent import DiagnosticAgent
     from src.utils.cli import create_default_ui
 except ImportError as e:
-    print(f"Error importing modules: {e}")
-    print(f"Python path: {sys.path}")
-    print(f"Base path: {base_path}")
+    print(f"Fatal Error: Could not import required modules. {e}")
+    print(f"\nDebugging Info:")
+    print(f"  - Python Executable: {sys.executable}")
+    print(f"  - System Path: {sys.path}")
+    print(f"  - Base Path Calculated: {base_path}")
+    input("\nPress Enter to exit.")
     sys.exit(1)
 
 
