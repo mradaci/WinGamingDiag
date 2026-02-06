@@ -192,9 +192,9 @@ class SecretRedactor:
         return anonymized
     
     def redact_path(self, path: str) -> str:
-        """
+        r"""
         Redact username from file paths
-        r"C:\Users\JohnDoe\Documents -> C:\Users\USER_abc12345\Documents"
+        C:\Users\JohnDoe\Documents -> C:\Users\USER_abc12345\Documents
         """
         # Match Windows user paths
         windows_pattern = r'(C:\\Users\\|/Users/)([^/\\]+)([/\\])'
