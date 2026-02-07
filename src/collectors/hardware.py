@@ -201,13 +201,20 @@ class HardwareCollector:
     
     def collect_memory_info(self) -> Optional[MemoryInfo]:
         """Collect memory/RAM information"""
+        import sys
+        print("      [Memory] Starting collect_memory_info()...", flush=True)
+        
         if not self.wmi.is_available:
+            print("      [Memory] WMI not available, using fallback", flush=True)
             return self._collect_memory_fallback()
         
+        print("      [Memory] Getting memory info from WMI...", flush=True)
         # Get physical memory modules
         modules = self.wmi.get_memory_info()
+        print(f"      [Memory] WMI returned {len(modules) if modules else 0} modules", flush=True)
         
         if not modules:
+            print("      [Memory] No modules found, returning None", flush=True)
             return None
         
         total_bytes = 0
@@ -216,7 +223,8 @@ class HardwareCollector:
         slot_types = []
         memory_modules = []
         
-        for module in modules:
+        print("      [Memory] Processing modules...", flush=True)
+        for i, module in enumerate(modules):
             capacity = module.get('Capacity', 0)
             if capacity:
                 total_bytes += int(capacity)
@@ -250,11 +258,18 @@ class HardwareCollector:
                 'slot': module.get('DeviceLocator')
             })
         
+        print(f"      [Memory] Processed {len(memory_modules)} modules", flush=True)
+        
         # Get total system memory from OS
+        print("      [Memory] Getting system memory via ctypes...", flush=True)
         try:
             import ctypes
+            print("      [Memory] Importing ctypes...", flush=True)
             kernel32 = ctypes.windll.kernel32
+            print("      [Memory] Got kernel32...", flush=True)
             c_ulong = ctypes.c_ulong
+            
+            print("      [Memory] Defining MEMORYSTATUS structure...", flush=True)
             class MEMORYSTATUS(ctypes.Structure):
                 _fields_ = [
                     ("dwLength", c_ulong),
@@ -267,23 +282,31 @@ class HardwareCollector:
                     ("dwAvailVirtual", c_ulong)
                 ]
             
+            print("      [Memory] Creating MEMORYSTATUS instance...", flush=True)
             memory_status = MEMORYSTATUS()
             memory_status.dwLength = ctypes.sizeof(MEMORYSTATUS)
+            
+            print("      [Memory] Calling GlobalMemoryStatus...", flush=True)
             kernel32.GlobalMemoryStatus(ctypes.byref(memory_status))
             
+            print("      [Memory] Calculating memory values...", flush=True)
             total_gb = memory_status.dwTotalPhys / (1024**3)
             available_gb = memory_status.dwAvailPhys / (1024**3)
             used_gb = total_gb - available_gb
-        except:
+            print(f"      [Memory] Total: {total_gb:.2f}GB, Used: {used_gb:.2f}GB", flush=True)
+        except Exception as e:
+            print(f"      [Memory] ctypes failed ({e}), using WMI data", flush=True)
             total_gb = total_bytes / (1024**3)
             used_gb = 0
             available_gb = total_gb
         
         # Determine common speed and type
+        print("      [Memory] Determining common speed/type...", flush=True)
         common_speed = max(set(slot_speeds), key=slot_speeds.count) if slot_speeds else None
         common_type = max(set(slot_types), key=slot_types.count) if slot_types else None
         
-        return MemoryInfo(
+        print("      [Memory] Creating MemoryInfo object...", flush=True)
+        result = MemoryInfo(
             total_gb=round(total_gb, 2),
             used_gb=round(used_gb, 2),
             available_gb=round(available_gb, 2),
@@ -294,6 +317,8 @@ class HardwareCollector:
             xmp_enabled=False,  # Requires motherboard-specific detection
             modules=memory_modules
         )
+        print("      [Memory] ✓ MemoryInfo created successfully", flush=True)
+        return result
     
     def _collect_memory_fallback(self) -> Optional[MemoryInfo]:
         """Fallback memory collection"""
