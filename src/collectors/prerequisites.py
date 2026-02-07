@@ -136,7 +136,7 @@ class PrerequisitesChecker:
             val, _ = winreg.QueryValueEx(key, value_name)
             winreg.CloseKey(key)
             return True, str(val)
-        except WindowsError:
+        except OSError:  # WindowsError is a subclass of OSError, this works on all platforms
             return False, None
         except Exception:
             return False, None
