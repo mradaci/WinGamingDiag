@@ -111,6 +111,18 @@ class DiagnosticAgent:
         )
         
         self._display_results(result)
+        
+        # EMERGENCY FALLBACK: Print summary directly to ensure user sees results
+        print("\n" + "="*70, flush=True)
+        print(f"DIAGNOSTIC COMPLETE - Health Score: {result.health_score}/100", flush=True)
+        print(f"Issues Found: {len(result.issues)} (Critical: {result.critical_count}, High: {result.high_count}, Medium: {result.medium_count}, Low: {result.low_count})", flush=True)
+        print("="*70, flush=True)
+        
+        # Ensure all output is flushed before returning
+        import sys
+        sys.stdout.flush()
+        sys.stderr.flush()
+        
         return result
     
     def _collect_windows_info(self) -> WindowsInfo:
@@ -329,12 +341,20 @@ class DiagnosticAgent:
             from pathlib import Path
             import json
             from dataclasses import asdict
+            import os
             
-            # Default to desktop
+            # Default to desktop, fallback to current directory
             if output_path is None:
-                desktop = Path.home() / "Desktop"
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_path = desktop / f"WinGamingDiag_Report_{timestamp}.txt"
+                filename = f"WinGamingDiag_Report_{timestamp}.txt"
+                
+                # Try Desktop first
+                desktop = Path.home() / "Desktop"
+                if desktop.exists() and os.access(desktop, os.W_OK):
+                    output_path = desktop / filename
+                else:
+                    # Fallback to current directory
+                    output_path = Path(filename)
             else:
                 output_path = Path(output_path)
             
