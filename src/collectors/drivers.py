@@ -123,6 +123,45 @@ class DriverCompatibilityChecker:
         """
         self.wmi_helper = wmi_helper
         self.errors: List[str] = []
+        self._load_external_drivers_db()
+        
+    def _load_external_drivers_db(self):
+        """Load external drivers.json if available for version updates"""
+        import json
+        import os
+        import sys
+        
+        # Check multiple locations for drivers.json
+        paths_to_check = [
+            os.path.join(os.getcwd(), 'drivers.json'),
+        ]
+        
+        # If running as frozen executable, check executable directory
+        if getattr(sys, 'frozen', False):
+            exe_dir = os.path.dirname(sys.executable)
+            paths_to_check.append(os.path.join(exe_dir, 'drivers.json'))
+        
+        # Also check script directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        paths_to_check.append(os.path.join(script_dir, '..', '..', 'drivers.json'))
+            
+        for path in paths_to_check:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        # Validate it's a proper driver database
+                        if isinstance(data, dict) and 'nvidia' in data:
+                            # Deep merge with existing defaults
+                            for vendor, details in data.items():
+                                if vendor in self.LATEST_DRIVERS:
+                                    self.LATEST_DRIVERS[vendor].update(details)
+                                else:
+                                    self.LATEST_DRIVERS[vendor] = details
+                            self.errors.append(f"Loaded external driver DB from {path}")
+                            break 
+                except Exception as e:
+                    self.errors.append(f"Failed to load external drivers DB from {path}: {e}")
         
     def check_all_drivers(self) -> DriverCompatibilityResult:
         """

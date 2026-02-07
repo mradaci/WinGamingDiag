@@ -1,6 +1,6 @@
 """
 WinGamingDiag - Performance Benchmark
-Simple performance benchmarking module
+Simple performance benchmarking module with disk I/O testing
 """
 
 from typing import Dict, List, Optional, Any
@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import time
 import math
+import os
+import tempfile
+import random
+from enum import Enum
 
 
 @dataclass
@@ -55,11 +59,27 @@ class BenchmarkSuite:
         return total_weighted_score / total_weight if total_weight > 0 else 0.0
 
 
+class BenchmarkSize(Enum):
+    """Configurable benchmark sizes for disk I/O testing"""
+    QUICK = 32      # 32MB - Fast test
+    DEFAULT = 128   # 128MB - Standard test
+    THOROUGH = 512  # 512MB - Comprehensive test
+
+
 class PerformanceBenchmark:
     """
     Simple performance benchmarking suite.
-    Tests CPU, memory, and basic operations performance.
+    Tests CPU, memory, basic operations, and disk I/O performance.
     """
+    
+    def __init__(self, disk_test_size: BenchmarkSize = BenchmarkSize.DEFAULT):
+        """
+        Initialize benchmark with configurable disk test size
+        
+        Args:
+            disk_test_size: Size of disk benchmark (QUICK=32MB, DEFAULT=128MB, THOROUGH=512MB)
+        """
+        self.disk_test_size = disk_test_size
     
     def run_benchmarks(self) -> BenchmarkSuite:
         """
@@ -82,6 +102,9 @@ class PerformanceBenchmark:
         
         # String operations benchmark
         results.append(self._benchmark_string())
+        
+        # Disk I/O benchmark
+        results.append(self._benchmark_disk_io())
         
         total_duration = (time.time() - start_time) * 1000
         
@@ -196,6 +219,81 @@ class PerformanceBenchmark:
             duration_ms=duration,
             details={'strings_processed': len(strings)}
         )
+    
+    def _benchmark_disk_io(self) -> BenchmarkResult:
+        """Benchmark disk sequential read/write performance"""
+        # Use configurable test size
+        file_size_mb = self.disk_test_size.value
+        chunk_size = 1024 * 1024  # 1MB chunks
+        
+        # Create temp file with random name
+        temp_dir = tempfile.gettempdir()
+        temp_file = os.path.join(temp_dir, f"wingamingdiag_bench_{random.randint(1000, 9999)}.tmp")
+        
+        # Generate random data (defeats compression)
+        data = os.urandom(chunk_size)
+        
+        try:
+            # Write Test
+            start_write = time.time()
+            with open(temp_file, 'wb') as f:
+                for _ in range(file_size_mb):
+                    f.write(data)
+                # Force write to disk
+                f.flush()
+                os.fsync(f.fileno())
+            end_write = time.time()
+            
+            write_time = end_write - start_write
+            write_speed_mbps = file_size_mb / max(write_time, 0.001)
+            
+            # Read Test
+            start_read = time.time()
+            with open(temp_file, 'rb') as f:
+                while True:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        break
+            end_read = time.time()
+            
+            read_time = end_read - start_read
+            read_speed_mbps = file_size_mb / max(read_time, 0.001)
+            
+            # Clean up
+            os.remove(temp_file)
+            
+            # Score: Combined MB/s scaled for overall scoring
+            combined_speed = (write_speed_mbps + read_speed_mbps) / 2
+            score = combined_speed * 10  # Scale to match other benchmark scores
+            
+            return BenchmarkResult(
+                name="Disk I/O (Seq)",
+                score=score,
+                unit="MB/s",
+                duration_ms=(write_time + read_time) * 1000,
+                details={
+                    'write_speed_mbps': round(write_speed_mbps, 2),
+                    'read_speed_mbps': round(read_speed_mbps, 2),
+                    'file_size_mb': file_size_mb,
+                    'test_size_label': self.disk_test_size.name
+                }
+            )
+            
+        except Exception as e:
+            # Cleanup if failed
+            if os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass
+            
+            return BenchmarkResult(
+                name="Disk I/O (Seq)",
+                score=0,
+                unit="MB/s",
+                duration_ms=0,
+                details={'error': str(e)}
+            )
 
 
-__all__ = ['PerformanceBenchmark', 'BenchmarkResult', 'BenchmarkSuite']
+__all__ = ['PerformanceBenchmark', 'BenchmarkResult', 'BenchmarkSuite', 'BenchmarkSize']

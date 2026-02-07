@@ -101,9 +101,9 @@ class GameLauncherDetector:
                 r'C:\Program Files (x86)\Epic Games\Launcher',
                 r'C:\Program Files\Epic Games\Launcher'
             ],
-            'executable': 'Portal\Binaries\Win64\EpicGamesLauncher.exe',
+            'executable': r'PortalBinariesWin64EpicGamesLauncher.exe',
             'library_folders': ['Data'],
-            'config_files': ['Saved\Config\Windows\GameUserSettings.ini'],
+            'config_files': [r'SavedConfigWindowsGameUserSettings.ini'],
             'overlay_name': 'Epic Overlay',
             'process_name': 'EpicGamesLauncher.exe'
         },
@@ -117,7 +117,7 @@ class GameLauncherDetector:
                 r'C:\Program Files\Electronic Arts\EA Desktop',
                 r'C:\Program Files (x86)\Electronic Arts\EA Desktop'
             ],
-            'executable': 'EA Desktop\EA Desktop.exe',
+            'executable': r'EA DesktopEA Desktop.exe',
             'library_folders': [],
             'config_files': [],
             'overlay_name': 'EA Overlay',
@@ -192,7 +192,7 @@ class GameLauncherDetector:
                 r'C:\Program Files\Riot Games',
                 r'C:\Program Files (x86)\Riot Games'
             ],
-            'executable': 'Riot Client\RiotClientServices.exe',
+            'executable': r'Riot ClientRiotClientServices.exe',
             'library_folders': [],
             'config_files': [],
             'overlay_name': 'Riot Vanguard',
@@ -504,7 +504,7 @@ class GameLauncherDetector:
                 config_path = install_path / 'config' / 'config.vdf'
                 if config_path.exists():
                     content = config_path.read_text()
-                    return '"InGameOverlayEnable"\s*"1"' in content
+                    return r'"InGameOverlayEnable"\s*"1"' in content
                     
             elif launcher_type == LauncherType.EPIC:
                 # Epic overlay is usually enabled by default

@@ -289,6 +289,9 @@ class SystemSnapshot:
     driver_result: Any = None
     launcher_result: Any = None
     network_result: Any = None
+    prerequisites_result: Any = None
+    process_issues: Any = None
+    benchmark_result: Any = None
     
     def __post_init__(self):
         if self.timestamp is None:

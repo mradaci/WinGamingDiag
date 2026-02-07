@@ -44,6 +44,16 @@ class EventLogSummary:
     driver_errors: List[EventLogEntry] = field(default_factory=list)
     system_errors: List[EventLogEntry] = field(default_factory=list)
     analysis_period_days: int = 7
+    
+    @property
+    def app_crashes(self) -> int:
+        """Count application crashes (Event ID 1001)"""
+        return sum(1 for event in self.recent_crashes if event.event_id == 1001)
+    
+    @property
+    def critical_errors(self) -> int:
+        """Total critical errors"""
+        return self.critical_count
 
 
 class EventLogCollector:
@@ -108,6 +118,11 @@ class EventLogCollector:
         self.days_to_analyze = days_to_analyze
         self.errors: List[str] = []
         
+    def collect_summary(self, days_back: int = 7) -> EventLogSummary:
+        """Collect and analyze event logs (alias for collect_all with days parameter)"""
+        self.days_to_analyze = days_back
+        return self.collect_all()
+    
     def collect_all(self) -> EventLogSummary:
         """
         Collect and analyze event logs

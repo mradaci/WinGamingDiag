@@ -95,7 +95,7 @@ class NetworkDiagnostics:
     GAMING_SERVERS = [
         {'host': '8.8.8.8', 'name': 'Google DNS', 'region': 'Global'},
         {'host': '1.1.1.1', 'name': 'Cloudflare DNS', 'region': 'Global'},
-        {'host': ' Valve test servers', 'name': 'Steam (Valve)', 'region': 'Global'},
+        {'host': 'steamcommunity.com', 'name': 'Steam Community', 'region': 'Global'},
         {'host': 'epicgames.com', 'name': 'Epic Games', 'region': 'Global'},
     ]
     

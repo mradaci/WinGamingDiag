@@ -1,0 +1,44 @@
+{
+  "_comment": "WinGamingDiag External Driver Database - Update this file to check for newer drivers without rebuilding the executable",
+  "_last_updated": "2025-02-06",
+  "_instructions": "Place this file in the same directory as WinGamingDiag.exe to override built-in driver versions",
+  
+  "nvidia": {
+    "game_ready": "572.16",
+    "studio": "572.16",
+    "minimum_gaming": "566.00",
+    "update_url": "https://www.nvidia.com/drivers"
+  },
+  
+  "amd": {
+    "adrenalin": "25.1.1",
+    "pro": "24.Q4",
+    "minimum_gaming": "24.12.1",
+    "update_url": "https://www.amd.com/support"
+  },
+  
+  "intel": {
+    "arc": "32.0.101.6129",
+    "xe": "32.0.101.6129",
+    "minimum_gaming": "32.0.101.6000",
+    "update_url": "https://www.intel.com/content/www/us/en/download-center"
+  },
+  
+  "realtek": {
+    "hd_audio": "6.0.9235.1",
+    "minimum": "6.0.9000.0",
+    "update_url": "https://www.realtek.com/en/component/zoo/category/pc-audio-codecs"
+  },
+  
+  "intel_network": {
+    "ethernet": "28.0.0",
+    "wifi": "23.0.0",
+    "update_url": "https://www.intel.com/content/www/us/en/download-center"
+  },
+  
+  "killer": {
+    "ethernet": "3.0.0",
+    "wifi": "3.0.0",
+    "update_url": "https://support.killernetworking.com"
+  }
+}
