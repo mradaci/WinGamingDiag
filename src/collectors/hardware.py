@@ -259,6 +259,7 @@ class HardwareCollector:
             })
         
         print(f"      [Memory] Processed {len(memory_modules)} modules", flush=True)
+        print(f"      [Memory] Module data: {memory_modules}", flush=True)
         
         # Get total system memory from OS
         print("      [Memory] Getting system memory via ctypes...", flush=True)
@@ -311,6 +312,17 @@ class HardwareCollector:
         print(f"      [Memory]   speed_mhz={common_speed}, type={common_type}", flush=True)
         print(f"      [Memory]   slots_used={used_slots}", flush=True)
         print(f"      [Memory]   modules count={len(memory_modules)}", flush=True)
+        
+        # Test with minimal data first
+        print("      [Memory] Testing minimal MemoryInfo creation...", flush=True)
+        try:
+            test_info = MemoryInfo(total_gb=1.0, used_gb=0.5, available_gb=0.5)
+            print("      [Memory] ✓ Minimal MemoryInfo works", flush=True)
+        except Exception as e:
+            print(f"      [Memory] ✗ Minimal MemoryInfo failed: {e}", flush=True)
+            raise
+        
+        print("      [Memory] Creating full MemoryInfo...", flush=True)
         try:
             result = MemoryInfo(
                 total_gb=round(total_gb, 2),
