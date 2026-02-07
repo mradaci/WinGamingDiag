@@ -303,7 +303,8 @@ class HardwareCollector:
         # Determine common speed and type
         print("      [Memory] Determining common speed/type...", flush=True)
         common_speed = max(set(slot_speeds), key=slot_speeds.count) if slot_speeds else None
-        common_type = max(set(slot_types), key=slot_types.count) if slot_types else None
+        common_type = max(set(slot_types), key=slot_types.count) if slot_types else "Unknown"
+        print(f"      [Memory]   common_speed={common_speed}, common_type={common_type}", flush=True)
         
         print("      [Memory] Creating MemoryInfo object...", flush=True)
         print(f"      [Memory]   total_gb={total_gb}, used_gb={used_gb}, available_gb={available_gb}", flush=True)
@@ -336,11 +337,15 @@ class HardwareCollector:
     
     def collect_gpu_info(self) -> List[GPUInfo]:
         """Collect GPU/graphics card information"""
+        print("      [GPU] Starting collect_gpu_info()...", flush=True)
         if not self.wmi.is_available:
+            print("      [GPU] WMI not available, returning empty list", flush=True)
             return []
         
+        print("      [GPU] Getting video controller info from WMI...", flush=True)
         gpus = []
         controllers = self.wmi.get_video_controller_info()
+        print(f"      [GPU] WMI returned {len(controllers)} controllers", flush=True)
         
         for controller in controllers:
             # Skip Microsoft Basic Display Adapter (virtual driver)
@@ -397,19 +402,28 @@ class HardwareCollector:
             )
             
             gpus.append(gpu)
+            print(f"      [GPU] Added GPU: {name}", flush=True)
         
+        print(f"      [GPU] ✓ Collected {len(gpus)} GPUs", flush=True)
         return gpus
     
     def collect_storage_info(self) -> List[StorageInfo]:
         """Collect storage device information"""
+        print("      [Storage] Starting collect_storage_info()...", flush=True)
         if not self.wmi.is_available:
+            print("      [Storage] WMI not available, returning empty list", flush=True)
             return []
         
+        print("      [Storage] Getting disk drive info from WMI...", flush=True)
         drives = []
         
         # Get physical disk drives
         disk_drives = self.wmi.get_disk_drive_info()
+        print(f"      [Storage] WMI returned {len(disk_drives)} disk drives", flush=True)
+        
+        print("      [Storage] Getting logical disk info from WMI...", flush=True)
         logical_disks = {d.get('DeviceID'): d for d in self.wmi.get_logical_disk_info()}
+        print(f"      [Storage] WMI returned {len(logical_disks)} logical disks", flush=True)
         
         for disk in disk_drives:
             model = disk.get('Model', 'Unknown')
@@ -469,10 +483,14 @@ class HardwareCollector:
     
     def collect_motherboard_info(self) -> Optional[MotherboardInfo]:
         """Collect motherboard information"""
+        print("      [Motherboard] Starting collect_motherboard_info()...", flush=True)
         if not self.wmi.is_available:
+            print("      [Motherboard] WMI not available, returning None", flush=True)
             return None
         
+        print("      [Motherboard] Getting baseboard info from WMI...", flush=True)
         baseboard = self.wmi.get_baseboard_info()
+        print("      [Motherboard] Getting BIOS info from WMI...", flush=True)
         bios = self.wmi.get_bios_info()
         
         if not baseboard and not bios:
@@ -494,7 +512,8 @@ class HardwareCollector:
         if 'uefi' in bios_version.lower() or 'efi' in str(bios.get('SoftwareElementID', '')).lower():
             bios_mode = 'UEFI'
         
-        return MotherboardInfo(
+        print(f"      [Motherboard] Creating MotherboardInfo: {manufacturer} {model}", flush=True)
+        result = MotherboardInfo(
             manufacturer=manufacturer,
             model=model,
             version=version,
@@ -505,14 +524,23 @@ class HardwareCollector:
             secure_boot_enabled=False,  # Requires registry check
             tpm_enabled=False  # Requires TPM WMI class
         )
+        print("      [Motherboard] ✓ MotherboardInfo created successfully", flush=True)
+        return result
     
     def collect_cooling_info(self) -> Optional[CoolingInfo]:
         """Collect cooling system information"""
+        print("      [Cooling] Starting collect_cooling_info()...", flush=True)
         if not self.wmi.is_available:
+            print("      [Cooling] WMI not available, returning None", flush=True)
             return None
         
+        print("      [Cooling] Getting fan info from WMI...", flush=True)
         fans = self.wmi.get_fan_info()
+        print(f"      [Cooling] WMI returned {len(fans)} fans", flush=True)
+        
+        print("      [Cooling] Getting temperature info from WMI...", flush=True)
         temps = self.wmi.get_temperature_info()
+        print(f"      [Cooling] WMI returned {len(temps) if temps else 0} temperature readings", flush=True)
         
         case_fans = []
         for fan in fans:
@@ -525,24 +553,30 @@ class HardwareCollector:
         # Check for water cooling indicators
         water_cooling = any('pump' in str(f.get('Name', '')).lower() for f in fans)
         
-        return CoolingInfo(
+        print(f"      [Cooling] Found {len(case_fans)} case fans, water_cooling={water_cooling}", flush=True)
+        result = CoolingInfo(
             cpu_fan_rpm=None,  # Requires specific WMI class not always available
             case_fans=case_fans,
             water_cooling_detected=water_cooling,
             pump_rpm=None,
             coolant_temp=None
         )
+        print("      [Cooling] ✓ CoolingInfo created successfully", flush=True)
+        return result
     
     def collect_power_info(self) -> Optional[PowerInfo]:
         """Collect power supply information"""
+        print("      [Power] Starting collect_power_info()...", flush=True)
         # Power supply info is rarely available via WMI
         # Estimate based on hardware configuration
         
         estimated_wattage = None
         
         # Simple estimation based on GPU
+        print("      [Power] Estimating wattage based on GPU...", flush=True)
         try:
             gpus = self.collect_gpu_info()
+            print(f"      [Power] Found {len(gpus)} GPUs for estimation", flush=True)
             for gpu in gpus:
                 name = gpu.name.lower()
                 if 'rtx' in name or 'rx' in name or 'gtx' in name:
@@ -552,14 +586,18 @@ class HardwareCollector:
                 elif 'gt' in name or 'integrated' in name:
                     # Low-end or integrated, 300W PSU
                     estimated_wattage = 300
-        except:
+        except Exception as e:
+            print(f"      [Power] GPU estimation failed: {e}", flush=True)
             pass
         
-        return PowerInfo(
+        print(f"      [Power] Estimated wattage: {estimated_wattage}", flush=True)
+        result = PowerInfo(
             estimated_wattage=estimated_wattage,
             psu_model=None,
             efficiency_rating=None
         )
+        print("      [Power] ✓ PowerInfo created successfully", flush=True)
+        return result
     
     def get_errors(self) -> List[str]:
         """Get list of errors encountered during collection"""
