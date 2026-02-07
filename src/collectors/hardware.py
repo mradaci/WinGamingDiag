@@ -41,53 +41,78 @@ class HardwareCollector:
         Returns:
             HardwareSnapshot with all hardware information
         """
+        import sys
         snapshot = HardwareSnapshot()
+        
+        print("    [Hardware] Starting collect_all()...", flush=True)
         
         # Each collection is wrapped in a try/except to prevent a single failing component
         # from stopping the entire process.
         
+        print("    [Hardware] Collecting CPU...", flush=True)
         try:
             snapshot.cpu = self.collect_cpu_info()
+            print("    [Hardware] ✓ CPU collected", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ CPU failed: {e}", flush=True)
             self.errors.append(f"CPU collection failed: {e}")
             logging.error("CPU collection failed.", exc_info=True)
         
+        print("    [Hardware] Collecting Memory...", flush=True)
         try:
             snapshot.memory = self.collect_memory_info()
+            print("    [Hardware] ✓ Memory collected", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ Memory failed: {e}", flush=True)
             self.errors.append(f"Memory collection failed: {e}")
             logging.error("Memory collection failed.", exc_info=True)
         
+        print("    [Hardware] Collecting GPU...", flush=True)
         try:
             snapshot.gpus = self.collect_gpu_info()
+            print(f"    [Hardware] ✓ GPU collected ({len(snapshot.gpus)} GPUs)", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ GPU failed: {e}", flush=True)
             self.errors.append(f"GPU collection failed: {e}")
             logging.error("GPU collection failed.", exc_info=True)
         
+        print("    [Hardware] Collecting Storage...", flush=True)
         try:
             snapshot.storage_devices = self.collect_storage_info()
+            print(f"    [Hardware] ✓ Storage collected ({len(snapshot.storage_devices)} devices)", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ Storage failed: {e}", flush=True)
             self.errors.append(f"Storage collection failed: {e}")
             logging.error("Storage collection failed.", exc_info=True)
         
+        print("    [Hardware] Collecting Motherboard...", flush=True)
         try:
             snapshot.motherboard = self.collect_motherboard_info()
+            print("    [Hardware] ✓ Motherboard collected", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ Motherboard failed: {e}", flush=True)
             self.errors.append(f"Motherboard collection failed: {e}")
             logging.error("Motherboard collection failed.", exc_info=True)
         
+        print("    [Hardware] Collecting Cooling...", flush=True)
         try:
             snapshot.cooling = self.collect_cooling_info()
+            print("    [Hardware] ✓ Cooling collected", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ Cooling failed: {e}", flush=True)
             self.errors.append(f"Cooling collection failed: {e}")
             logging.error("Cooling collection failed.", exc_info=True)
         
+        print("    [Hardware] Collecting Power...", flush=True)
         try:
             snapshot.power = self.collect_power_info()
+            print("    [Hardware] ✓ Power collected", flush=True)
         except Exception as e:
+            print(f"    [Hardware] ✗ Power failed: {e}", flush=True)
             self.errors.append(f"Power collection failed: {e}")
             logging.error("Power collection failed.", exc_info=True)
         
+        print("    [Hardware] collect_all() complete", flush=True)
         return snapshot
     
     def collect_cpu_info(self) -> Optional[CPUInfo]:
