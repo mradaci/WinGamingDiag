@@ -10,14 +10,13 @@ from typing import Optional, List
 import logging
 
 from ..models import (
-    SystemSnapshot, DiagnosticResult, Issue, WindowsInfo, HardwareSnapshot,
-    EventLogSummary, DriverCompatibilityResult, GameLauncherResult, NetworkDiagnosticsResult
+    SystemSnapshot, DiagnosticResult, Issue, WindowsInfo, HardwareSnapshot
 )
 from ..collectors.hardware import HardwareCollector
-from ..collectors.event_logs import EventLogCollector
-from ..collectors.drivers import DriverCompatibilityChecker
-from ..collectors.launchers import GameLauncherDetector
-from ..collectors.network import NetworkDiagnostics
+from ..collectors.event_logs import EventLogCollector, EventLogSummary
+from ..collectors.drivers import DriverCompatibilityChecker, DriverCompatibilityResult
+from ..collectors.launchers import GameLauncherDetector, GameLauncherResult
+from ..collectors.network import NetworkDiagnostics, NetworkDiagnosticsResult
 from ..collectors.prerequisites import PrerequisitesChecker, PrerequisitesResult
 from ..collectors.processes import ProcessAnalyzer
 from ..utils.benchmark import PerformanceBenchmark, BenchmarkSuite, BenchmarkSize
