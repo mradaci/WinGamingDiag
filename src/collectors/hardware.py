@@ -306,19 +306,29 @@ class HardwareCollector:
         common_type = max(set(slot_types), key=slot_types.count) if slot_types else None
         
         print("      [Memory] Creating MemoryInfo object...", flush=True)
-        result = MemoryInfo(
-            total_gb=round(total_gb, 2),
-            used_gb=round(used_gb, 2),
-            available_gb=round(available_gb, 2),
-            speed_mhz=common_speed,
-            type=common_type,
-            slots_used=used_slots,
-            slots_total=used_slots,  # Cannot determine total slots without SMBIOS
-            xmp_enabled=False,  # Requires motherboard-specific detection
-            modules=memory_modules
-        )
-        print("      [Memory] ✓ MemoryInfo created successfully", flush=True)
-        return result
+        print(f"      [Memory]   total_gb={total_gb}, used_gb={used_gb}, available_gb={available_gb}", flush=True)
+        print(f"      [Memory]   speed_mhz={common_speed}, type={common_type}", flush=True)
+        print(f"      [Memory]   slots_used={used_slots}", flush=True)
+        print(f"      [Memory]   modules count={len(memory_modules)}", flush=True)
+        try:
+            result = MemoryInfo(
+                total_gb=round(total_gb, 2),
+                used_gb=round(used_gb, 2),
+                available_gb=round(available_gb, 2),
+                speed_mhz=common_speed,
+                type=common_type,
+                slots_used=used_slots,
+                slots_total=used_slots,  # Cannot determine total slots without SMBIOS
+                xmp_enabled=False,  # Requires motherboard-specific detection
+                modules=memory_modules
+            )
+            print("      [Memory] ✓ MemoryInfo created successfully", flush=True)
+            return result
+        except Exception as e:
+            print(f"      [Memory] ✗ FAILED to create MemoryInfo: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            raise
     
     def _collect_memory_fallback(self) -> Optional[MemoryInfo]:
         """Fallback memory collection"""
